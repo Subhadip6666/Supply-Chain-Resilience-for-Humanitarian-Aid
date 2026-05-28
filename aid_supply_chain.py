@@ -9,12 +9,80 @@ Authors : Subhadip Patra
 Course  : CS302
 """
 
+import sys
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import copy
+import time
+import random
 
+class Colors:
+    LIGHT_RED = '\033[91m'      # Bright Red
+    LIGHT_VIOLET = '\033[95m'   # Bright Magenta / Violet
+    LIGHT_PURPLE = '\033[38;5;141m' # Light Purple (256 color)
+    LIGHT_GREEN = '\033[92m'    # Bright Green
+    LIGHT_BLUE = '\033[96m'     # Bright Cyan / Light Blue
+    
+    HEADER = '\033[38;5;141m'   # Light Purple
+    OKBLUE = '\033[96m'         # Light Blue
+    OKCYAN = '\033[96m'         # Light Blue
+    OKGREEN = '\033[92m'        # Light Green
+    WARNING = '\033[93m'        # Bright Yellow
+    FAIL = '\033[91m'           # Light Red
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def print_slow(text, delay=0.01, color=Colors.ENDC, end='\n'):
+    sys.stdout.write(color)
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    sys.stdout.write(Colors.ENDC)
+    sys.stdout.write(end)
+    sys.stdout.flush()
+
+def animate_typing_human(text, delay_base=0.015, color=Colors.ENDC, end='\n'):
+    sys.stdout.write(color)
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(max(0.002, delay_base + random.uniform(-0.005, 0.02)))
+    sys.stdout.write(Colors.ENDC)
+    sys.stdout.write(end)
+    sys.stdout.flush()
+
+def print_color(text, color=Colors.ENDC, end='\n'):
+    sys.stdout.write(color + text + Colors.ENDC + end)
+    sys.stdout.flush()
+
+def animate_spinner(message, duration=0.8):
+    spinner_chars = ['|', '/', '-', '\\']
+    end_time = time.time() + duration
+    sys.stdout.write(Colors.OKCYAN + message + " ")
+    i = 0
+    while time.time() < end_time:
+        sys.stdout.write(spinner_chars[i % len(spinner_chars)])
+        sys.stdout.flush()
+        time.sleep(0.05)
+        sys.stdout.write('\b')
+        i += 1
+    sys.stdout.write(Colors.OKGREEN + "Done!" + Colors.ENDC + "\n")
+    sys.stdout.flush()
+
+def animate_progress_bar(message, duration=0.8, length=30, color=Colors.OKCYAN):
+    sys.stdout.write(color + message + " [" + Colors.ENDC)
+    steps = length
+    sleep_time = duration / steps
+    for i in range(steps):
+        sys.stdout.write(color + "█" + Colors.ENDC)
+        sys.stdout.flush()
+        time.sleep(sleep_time)
+    sys.stdout.write(color + "] " + Colors.OKGREEN + "Complete!\n" + Colors.ENDC)
+    sys.stdout.flush()
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -201,19 +269,18 @@ def path_uses_subsidy(path):
 
 def print_bellman_ford_results(dist, pred):
     """Pretty-print Bellman-Ford shortest path results."""
-    print("\n" + "=" * 60)
-    print("  BELLMAN-FORD RESULTS  (Source: Central Warehouse / HQ)")
-    print("=" * 60)
+    print_color("\n" + "=" * 60, Colors.LIGHT_BLUE)
+    print_color("  BELLMAN-FORD RESULTS  (Source: Central Warehouse / HQ)", Colors.BOLD + Colors.LIGHT_BLUE)
+    print_color("=" * 60, Colors.LIGHT_BLUE)
 
     for node in range(1, NUM_NODES):
         path = reconstruct_path(pred, node)
         path_str = " → ".join(SHORT_NAMES[n] for n in path)
-        subsidy_tag = "  [uses subsidised route]" if path_uses_subsidy(path) else ""
+        subsidy_tag = f"  {Colors.LIGHT_GREEN}[uses subsidised route]{Colors.ENDC}" if path_uses_subsidy(path) else ""
         name = NODE_NAMES[node]
-        print(f"  Node {node:>2} ({name:<16}) | Cost: {dist[node]:>4} | "
-              f"Path: {path_str}{subsidy_tag}")
+        animate_typing_human(f"  Node {node:>2} ({name:<16}) | Cost: {dist[node]:>4} | Path: {path_str}{subsidy_tag}\n", delay_base=0.01)
 
-    print("=" * 60)
+    print_color("=" * 60, Colors.LIGHT_BLUE)
 
 
 # ======================================================================
@@ -311,18 +378,18 @@ def hamiltonian_cycle(cost_matrix):
 
 def print_hamiltonian_results(best_path, best_cost):
     """Pretty-print the Hamiltonian circuit results."""
-    print("\n" + "=" * 60)
-    print("  HAMILTONIAN CIRCUIT  (Delivery Route)")
-    print("=" * 60)
+    print_color("\n" + "=" * 60, Colors.LIGHT_PURPLE)
+    print_color("  HAMILTONIAN CIRCUIT  (Delivery Route)", Colors.BOLD + Colors.LIGHT_PURPLE)
+    print_color("=" * 60, Colors.LIGHT_PURPLE)
 
     if best_path is None:
-        print("  ⚠  No valid Hamiltonian circuit exists for this graph.")
+        print_color("  ⚠  No valid Hamiltonian circuit exists for this graph.", Colors.LIGHT_RED)
     else:
         circuit_str = " → ".join(SHORT_NAMES[n] for n in best_path)
-        print(f"  Circuit : {circuit_str}")
-        print(f"  Total Cost : {best_cost} units")
+        animate_typing_human(f"  Circuit : {circuit_str}\n", delay_base=0.015, color=Colors.LIGHT_GREEN)
+        animate_typing_human(f"  Total Cost : {best_cost} units\n", delay_base=0.015, color=Colors.LIGHT_GREEN)
 
-    print("=" * 60)
+    print_color("=" * 60, Colors.LIGHT_PURPLE)
 
 
 # ======================================================================
@@ -348,9 +415,9 @@ def integrate_algorithms(use_subsidies=True):
                     ham_path, ham_cost, use_subsidies
     """
     label = "WITH" if use_subsidies else "WITHOUT"
-    print("\n" + "#" * 60)
-    print(f"  RUNNING SYSTEM — {label} SUBSIDISED ROUTES")
-    print("#" * 60)
+    print_color("\n" + "#" * 60, Colors.LIGHT_BLUE)
+    print_color(f"  RUNNING SYSTEM — {label} SUBSIDISED ROUTES", Colors.BOLD + Colors.LIGHT_BLUE)
+    print_color("#" * 60, Colors.LIGHT_BLUE)
 
     # Step 1: Build the graph
     adj, edges = build_graph(use_subsidies=use_subsidies)
@@ -359,8 +426,8 @@ def integrate_algorithms(use_subsidies=True):
     dist, pred, has_neg_cycle = bellman_ford(adj, edges, source=0)
 
     if has_neg_cycle:
-        print("\n  ⚠⚠⚠  WARNING: Negative cycle detected in the graph!")
-        print("  Shortest paths are undefined. Aborting this run.")
+        print_color("\n  ⚠⚠⚠  WARNING: Negative cycle detected in the graph!", Colors.LIGHT_RED + Colors.BOLD)
+        print_color("  Shortest paths are undefined. Aborting this run.", Colors.LIGHT_RED)
         return None
 
     print_bellman_ford_results(dist, pred)
@@ -544,53 +611,69 @@ def compare_costs(results_with, results_without):
     Print a comparison table showing the impact of subsidised routes
     on total delivery circuit cost (aligned with SDG 17 — Partnerships).
     """
-    print("\n" + "=" * 60)
-    print("  COST COMPARISON  (SDG 17 — Partnerships for the Goals)")
-    print("=" * 60)
+    print_color("\n" + "=" * 60, Colors.LIGHT_PURPLE)
+    print_color("  COST COMPARISON  (SDG 17 — Partnerships for the Goals)", Colors.BOLD + Colors.LIGHT_PURPLE)
+    print_color("=" * 60, Colors.LIGHT_PURPLE)
 
     if results_with is None or results_without is None:
-        print("  ⚠ Cannot compare — one or both runs failed.")
+        print_color("  ⚠ Cannot compare — one or both runs failed.", Colors.LIGHT_RED)
         return
 
     cost_with = results_with["ham_cost"]
     cost_without = results_without["ham_cost"]
 
     if cost_with == INF or cost_without == INF:
-        print("  ⚠ Cannot compare — Hamiltonian circuit not found in one/both runs.")
+        print_color("  ⚠ Cannot compare — Hamiltonian circuit not found in one/both runs.", Colors.LIGHT_RED)
         return
 
     savings = cost_without - cost_with
 
-    print(f"  Without subsidised routes : {cost_without} units")
-    print(f"  With subsidised routes    : {cost_with} units")
-    print(f"  Savings through partnerships : {savings} units")
-    print()
+    animate_typing_human(f"  Without subsidised routes : {cost_without} units\n", delay_base=0.015)
+    animate_typing_human(f"  With subsidised routes    : {cost_with} units\n", delay_base=0.015)
+    animate_typing_human(f"  Savings through partnerships : {savings} units\n\n", delay_base=0.02)
+
     if savings > 0:
         pct = (savings / cost_without) * 100
-        print(f"  → Government & NGO partnerships reduced delivery cost by {pct:.1f}%")
+        print_color(f"  → Government & NGO partnerships reduced delivery cost by {pct:.1f}%", Colors.LIGHT_GREEN + Colors.BOLD)
     elif savings == 0:
-        print("  → No cost difference detected.")
+        print_color("  → No cost difference detected.", Colors.LIGHT_VIOLET)
     else:
-        print("  → Subsidised routes actually increased cost (unusual scenario).")
+        print_color("  → Subsidised routes actually increased cost (unusual scenario).", Colors.LIGHT_RED)
 
-    print("=" * 60)
+    print_color("=" * 60, Colors.LIGHT_PURPLE)
 
 
 # ======================================================================
 # FUNCTION: main
 # ======================================================================
 def main():
-    """
-    Main driver function.
-    1. Run with subsidies  (negative edges active)
-    2. Run without subsidies (negative edges → absolute values)
-    3. Compare costs
-    4. Visualise the subsidised-route scenario
-    """
-    print("╔" + "═" * 58 + "╗")
-    print("║  HUMANITARIAN AID SUPPLY CHAIN OPTIMISATION SYSTEM       ║")
-    print("║  Algorithms: Bellman-Ford  ·  Hamiltonian Cycle          ║")
-    print("╚" + "═" * 58 + "╝")
+    # Ensure stdout handles UTF-8 characters correctly on all platforms, including Windows console
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+
+    width = 58
+    print_color("╔" + "═" * width + "╗", Colors.LIGHT_PURPLE)
+    print_color("║" + "HUMANITARIAN AID SUPPLY CHAIN OPTIMISATION SYSTEM".center(width) + "║", Colors.BOLD + Colors.LIGHT_PURPLE)
+    print_color("╠" + "═" * width + "╣", Colors.LIGHT_PURPLE)
+    
+    info_lines = [
+        ("Author      : Subhadip Patra (Course: CS302)", Colors.LIGHT_RED),
+        ("Semester    : 4th Semester University Project", Colors.LIGHT_RED),
+        ("Algorithms  : Bellman-Ford & Hamiltonian Cycle", Colors.LIGHT_VIOLET),
+        ("", Colors.LIGHT_VIOLET),
+        ("Description :", Colors.LIGHT_VIOLET),
+        ("A post-disaster humanitarian aid supply chain system", Colors.LIGHT_VIOLET),
+        ("modelling relief supply delivery routes under SDG 17", Colors.LIGHT_VIOLET),
+        ("(Partnerships for the Goals). Solves shortest paths", Colors.LIGHT_VIOLET),
+        ("with government/NGO subsidies and plans optimal", Colors.LIGHT_VIOLET),
+        ("circuits using backtracking with pruning.", Colors.LIGHT_VIOLET)
+    ]
+    for line_text, color in info_lines:
+        print_color(f"║ {line_text.ljust(width - 2)} ║", color)
+    print_color("╚" + "═" * width + "╝\n", Colors.LIGHT_PURPLE)
+
+    animate_progress_bar("Booting Up Subsystems", duration=0.8, length=25, color=Colors.LIGHT_BLUE)
+    print()
 
     # ---- Run 1: WITH subsidised (negative-cost) routes ----
     results_with = integrate_algorithms(use_subsidies=True)
@@ -602,10 +685,10 @@ def main():
     compare_costs(results_with, results_without)
 
     # ---- Visualisation (show the subsidised scenario) ----
-    print("\n  Generating visualisations …")
+    animate_spinner("Generating visualisations …", duration=1.0)
     visualise_graph(results_with)
 
-    print("\n  ✓ All done. Figures saved to current directory.")
+    animate_typing_human("\n  ✓ All done. Figures saved to current directory.", delay_base=0.03, color=Colors.LIGHT_GREEN + Colors.BOLD)
 
 
 # ======================================================================

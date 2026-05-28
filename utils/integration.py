@@ -1,6 +1,7 @@
 from config import INF, NUM_NODES
 from graph import build_graph
 from algorithms import bellman_ford, print_bellman_ford_results, hamiltonian_cycle, print_hamiltonian_results
+from .ui import print_color, Colors, print_slow, animate_typing_human
 
 def build_complete_cost_matrix(adj, edges):
     cost_matrix = [[INF] * NUM_NODES for _ in range(NUM_NODES)]
@@ -15,16 +16,16 @@ def build_complete_cost_matrix(adj, edges):
 
 def integrate_algorithms(use_subsidies=True):
     label = "WITH" if use_subsidies else "WITHOUT"
-    print("\n" + "#" * 60)
-    print(f"  RUNNING SYSTEM — {label} SUBSIDISED ROUTES")
-    print("#" * 60)
+    print_color("\n" + "#" * 60, Colors.LIGHT_BLUE)
+    print_color(f"  RUNNING SYSTEM — {label} SUBSIDISED ROUTES", Colors.BOLD + Colors.LIGHT_BLUE)
+    print_color("#" * 60, Colors.LIGHT_BLUE)
 
     adj, edges = build_graph(use_subsidies=use_subsidies)
     dist, pred, has_neg_cycle = bellman_ford(adj, edges, source=0)
 
     if has_neg_cycle:
-        print("\n  ⚠⚠⚠  WARNING: Negative cycle detected in the graph!")
-        print("  Shortest paths are undefined. Aborting this run.")
+        print_color("\n  ⚠⚠⚠  WARNING: Negative cycle detected in the graph!", Colors.LIGHT_RED + Colors.BOLD)
+        print_color("  Shortest paths are undefined. Aborting this run.", Colors.LIGHT_RED)
         return None
 
     print_bellman_ford_results(dist, pred)
@@ -44,33 +45,33 @@ def integrate_algorithms(use_subsidies=True):
     }
 
 def compare_costs(results_with, results_without):
-    print("\n" + "=" * 60)
-    print("  COST COMPARISON  (SDG 17 — Partnerships for the Goals)")
-    print("=" * 60)
+    print_color("\n" + "=" * 60, Colors.LIGHT_PURPLE)
+    print_color("  COST COMPARISON  (SDG 17 — Partnerships for the Goals)", Colors.BOLD + Colors.LIGHT_PURPLE)
+    print_color("=" * 60, Colors.LIGHT_PURPLE)
 
     if results_with is None or results_without is None:
-        print("  ⚠ Cannot compare — one or both runs failed.")
+        print_color("  ⚠ Cannot compare — one or both runs failed.", Colors.LIGHT_RED)
         return
 
     cost_with = results_with["ham_cost"]
     cost_without = results_without["ham_cost"]
 
     if cost_with == INF or cost_without == INF:
-        print("  ⚠ Cannot compare — Hamiltonian circuit not found in one/both runs.")
+        print_color("  ⚠ Cannot compare — Hamiltonian circuit not found in one/both runs.", Colors.LIGHT_RED)
         return
 
     savings = cost_without - cost_with
 
-    print(f"  Without subsidised routes : {cost_without} units")
-    print(f"  With subsidised routes    : {cost_with} units")
-    print(f"  Savings through partnerships : {savings} units")
-    print()
+    animate_typing_human(f"  Without subsidised routes : {cost_without} units\n", delay_base=0.015)
+    animate_typing_human(f"  With subsidised routes    : {cost_with} units\n", delay_base=0.015)
+    animate_typing_human(f"  Savings through partnerships : {savings} units\n\n", delay_base=0.02)
+    
     if savings > 0:
         pct = (savings / cost_without) * 100
-        print(f"  → Government & NGO partnerships reduced delivery cost by {pct:.1f}%")
+        print_color(f"  → Government & NGO partnerships reduced delivery cost by {pct:.1f}%", Colors.LIGHT_GREEN + Colors.BOLD)
     elif savings == 0:
-        print("  → No cost difference detected.")
+        print_color("  → No cost difference detected.", Colors.LIGHT_VIOLET)
     else:
-        print("  → Subsidised routes actually increased cost (unusual scenario).")
+        print_color("  → Subsidised routes actually increased cost (unusual scenario).", Colors.LIGHT_RED)
 
-    print("=" * 60)
+    print_color("=" * 60, Colors.LIGHT_PURPLE)
