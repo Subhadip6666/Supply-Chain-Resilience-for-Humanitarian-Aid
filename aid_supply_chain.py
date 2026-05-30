@@ -14,6 +14,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 import copy
 import time
 import random
@@ -36,6 +37,7 @@ class Colors:
     UNDERLINE = '\033[4m'
 
 def print_slow(text, delay=0.01, color=Colors.ENDC, end='\n'):
+    delay = delay / 10.0
     sys.stdout.write(color)
     for char in text:
         sys.stdout.write(char)
@@ -46,11 +48,12 @@ def print_slow(text, delay=0.01, color=Colors.ENDC, end='\n'):
     sys.stdout.flush()
 
 def animate_typing_human(text, delay_base=0.015, color=Colors.ENDC, end='\n'):
+    delay_base = delay_base / 10.0
     sys.stdout.write(color)
     for char in text:
         sys.stdout.write(char)
         sys.stdout.flush()
-        time.sleep(max(0.002, delay_base + random.uniform(-0.005, 0.02)))
+        time.sleep(max(0.0002, delay_base + random.uniform(-0.0005, 0.002)))
     sys.stdout.write(Colors.ENDC)
     sys.stdout.write(end)
     sys.stdout.flush()
@@ -60,6 +63,7 @@ def print_color(text, color=Colors.ENDC, end='\n'):
     sys.stdout.flush()
 
 def animate_spinner(message, duration=0.8):
+    duration = duration / 10.0
     spinner_chars = ['|', '/', '-', '\\']
     end_time = time.time() + duration
     sys.stdout.write(Colors.OKCYAN + message + " ")
@@ -67,13 +71,14 @@ def animate_spinner(message, duration=0.8):
     while time.time() < end_time:
         sys.stdout.write(spinner_chars[i % len(spinner_chars)])
         sys.stdout.flush()
-        time.sleep(0.05)
+        time.sleep(0.01)
         sys.stdout.write('\b')
         i += 1
     sys.stdout.write(Colors.OKGREEN + "Done!" + Colors.ENDC + "\n")
     sys.stdout.flush()
 
 def animate_progress_bar(message, duration=0.8, length=30, color=Colors.OKCYAN):
+    duration = duration / 10.0
     sys.stdout.write(color + message + " [" + Colors.ENDC)
     steps = length
     sleep_time = duration / steps
@@ -209,6 +214,7 @@ def bellman_ford(adj, edges, source=0):
     dist : list[float]   — shortest cost from source to every node
     pred : list[int]     — predecessor array for path reconstruction
     has_negative_cycle : bool
+    dist_history : list[list[float]] — list of dist arrays after each iteration
     """
     V = NUM_NODES
 
@@ -216,6 +222,8 @@ def bellman_ford(adj, edges, source=0):
     dist = [INF] * V
     pred = [-1] * V
     dist[source] = 0
+
+    dist_history = []
 
     # ---- V-1 relaxation rounds ----
     for iteration in range(V - 1):  # exactly 11 rounds
@@ -233,6 +241,7 @@ def bellman_ford(adj, edges, source=0):
                 # Log when a subsidised (negative) edge causes relaxation
                 if (u, v) in SUBSIDISED_EDGES:
                     pass  # negative edge processed: subsidy applied
+        dist_history.append(list(dist))
 
     # ---- Negative cycle detection (one extra round) ----
     # If any distance can still be reduced (respecting parent-awareness),
@@ -245,7 +254,7 @@ def bellman_ford(adj, edges, source=0):
             has_negative_cycle = True
             break
 
-    return dist, pred, has_negative_cycle
+    return dist, pred, has_negative_cycle, dist_history
 
 
 def reconstruct_path(pred, target):
@@ -283,6 +292,28 @@ def print_bellman_ford_results(dist, pred):
     print_color("=" * 60, Colors.LIGHT_BLUE)
 
 
+def print_bf_iterations(edges, dist_history):
+    """
+    Prints a table showing the distance array after each of the first 3
+    relaxation rounds of Bellman-Ford (first 3 iterations only).
+    """
+    cols = ["Iteration"] + [SHORT_NAMES[i] for i in range(12)]
+    widths = [len(c) for c in cols]
+    
+    header_str = " | ".join(f"{cols[i]:^{widths[i]}}" for i in range(len(cols)))
+    print_color("\n" + header_str, Colors.LIGHT_BLUE)
+    
+    for it in range(3):
+        if it < len(dist_history):
+            row_vals = [f"{it + 1}"]
+            for node in range(12):
+                d = dist_history[it][node]
+                val_str = "INF" if d == INF else f"{int(d) if d == int(d) else d}"
+                row_vals.append(val_str)
+            row_str = " | ".join(f"{row_vals[i]:^{widths[i]}}" for i in range(len(cols)))
+            print(row_str)
+
+
 # ======================================================================
 # FUNCTION: build_complete_cost_matrix (integration helper)
 # ======================================================================
@@ -302,7 +333,7 @@ def build_complete_cost_matrix(adj, edges):
     all_preds = []
 
     for src in range(NUM_NODES):
-        dist, pred, neg = bellman_ford(adj, edges, source=src)
+        dist, pred, neg, _ = bellman_ford(adj, edges, source=src)
         cost_matrix[src] = dist
         all_preds.append(pred)
 
@@ -373,6 +404,47 @@ def hamiltonian_cycle(cost_matrix):
             visited[next_node] = False
 
     backtrack(0, 0, 1)
+
+    # ---- Hamiltonian Result Verification ----
+    verification_status = "FAILED"
+    verification_reason = "No Hamiltonian circuit found"
+
+    if best_path is not None:
+        if len(best_path) != 13:
+            verification_status = "FAILED"
+            verification_reason = f"Circuit path length is {len(best_path)}, expected 13"
+        elif best_path[0] != 0 or best_path[-1] != 0:
+            verification_status = "FAILED"
+            verification_reason = f"Circuit must start and end at node 0 (starts with {best_path[0]}, ends with {best_path[-1]})"
+        else:
+            unique_nodes = set(best_path[:-1])
+            if len(unique_nodes) != 12 or any(n < 0 or n >= 12 for n in unique_nodes):
+                verification_status = "FAILED"
+                verification_reason = "Not all 12 nodes are visited exactly once"
+            else:
+                calculated_cost = 0
+                cost_mismatch = False
+                for i in range(len(best_path) - 1):
+                    u, v = best_path[i], best_path[i + 1]
+                    c = cost_matrix[u][v]
+                    if c == INF:
+                        cost_mismatch = True
+                        verification_reason = f"Infinite cost step found between node {u} and {v}"
+                        break
+                    calculated_cost += c
+                
+                if cost_mismatch:
+                    verification_status = "FAILED"
+                elif abs(calculated_cost - best_cost) > 1e-6:
+                    verification_status = "FAILED"
+                    verification_reason = f"Calculated path cost ({calculated_cost}) does not match reported best_cost ({best_cost})"
+                else:
+                    verification_status = "VERIFIED"
+                    verification_reason = "All 12 nodes visited exactly once; starts and ends at node 0; cost matches sum along path"
+
+    hamiltonian_cycle.verification_status = verification_status
+    hamiltonian_cycle.verification_reason = verification_reason
+
     return best_path, best_cost
 
 
@@ -388,6 +460,13 @@ def print_hamiltonian_results(best_path, best_cost):
         circuit_str = " → ".join(SHORT_NAMES[n] for n in best_path)
         animate_typing_human(f"  Circuit : {circuit_str}\n", delay_base=0.015, color=Colors.LIGHT_GREEN)
         animate_typing_human(f"  Total Cost : {best_cost} units\n", delay_base=0.015, color=Colors.LIGHT_GREEN)
+        
+        status = getattr(hamiltonian_cycle, 'verification_status', None)
+        reason = getattr(hamiltonian_cycle, 'verification_reason', None)
+        if status == "VERIFIED":
+            animate_typing_human(f"  Verification: VERIFIED ({reason})\n", delay_base=0.015, color=Colors.LIGHT_GREEN)
+        else:
+            animate_typing_human(f"  Verification: FAILED ({reason if reason else 'Unknown issue'})\n", delay_base=0.015, color=Colors.LIGHT_RED)
 
     print_color("=" * 60, Colors.LIGHT_PURPLE)
 
@@ -423,7 +502,7 @@ def integrate_algorithms(use_subsidies=True):
     adj, edges = build_graph(use_subsidies=use_subsidies)
 
     # Step 2: Bellman-Ford from HQ
-    dist, pred, has_neg_cycle = bellman_ford(adj, edges, source=0)
+    dist, pred, has_neg_cycle, dist_history = bellman_ford(adj, edges, source=0)
 
     if has_neg_cycle:
         print_color("\n  ⚠⚠⚠  WARNING: Negative cycle detected in the graph!", Colors.LIGHT_RED + Colors.BOLD)
@@ -431,6 +510,7 @@ def integrate_algorithms(use_subsidies=True):
         return None
 
     print_bellman_ford_results(dist, pred)
+    print_bf_iterations(edges, dist_history)
 
     # Step 3: Build complete cost matrix (all-pairs shortest paths)
     cost_matrix, all_preds = build_complete_cost_matrix(adj, edges)
@@ -572,15 +652,26 @@ def visualise_graph(results):
     # Hamiltonian Circuit (red arrows)
     if ham_path is not None:
         DG = nx.DiGraph()
-        ham_edges = []
+        direct_ham_edges = []
+        indirect_ham_edges = []
         for i in range(len(ham_path) - 1):
-            ham_edges.append((ham_path[i], ham_path[i + 1]))
-            DG.add_edge(ham_path[i], ham_path[i + 1])
+            u, v = ham_path[i], ham_path[i + 1]
+            DG.add_edge(u, v)
+            if G.has_edge(u, v):
+                direct_ham_edges.append((u, v))
+            else:
+                indirect_ham_edges.append((u, v))
 
-        nx.draw_networkx_edges(DG, pos, edgelist=ham_edges, ax=ax2,
-                               edge_color='red', width=2.5, arrows=True,
-                               arrowsize=20, arrowstyle='-|>',
-                               connectionstyle='arc3,rad=0.1')
+        if direct_ham_edges:
+            nx.draw_networkx_edges(DG, pos, edgelist=direct_ham_edges, ax=ax2,
+                                   edge_color='red', width=2.5, arrows=True,
+                                   arrowsize=20, arrowstyle='-|>', style='solid',
+                                   connectionstyle='arc3,rad=0.1')
+        if indirect_ham_edges:
+            nx.draw_networkx_edges(DG, pos, edgelist=indirect_ham_edges, ax=ax2,
+                                   edge_color='red', width=2.5, arrows=True,
+                                   arrowsize=20, arrowstyle='-|>', style='dashed',
+                                   connectionstyle='arc3,rad=0.1')
 
         # Text box with total cost
         textstr = f"Hamiltonian Circuit Cost: {ham_cost} units"
@@ -588,11 +679,19 @@ def visualise_graph(results):
                      edgecolor='red', alpha=0.9)
         ax2.text(0.02, 0.98, textstr, transform=ax2.transAxes, fontsize=11,
                  verticalalignment='top', bbox=props)
+    else:
+        # Add a visible warning text box on Figure 2 saying "No Hamiltonian Circuit Found" in red if ham_path is None
+        textstr = "No Hamiltonian Circuit Found"
+        props = dict(boxstyle='round,pad=0.5', facecolor='white',
+                     edgecolor='red', alpha=0.9)
+        ax2.text(0.02, 0.98, textstr, transform=ax2.transAxes, fontsize=11,
+                 color='red', verticalalignment='top', bbox=props)
 
     # Legend
     legend_handles2 = [
-        mpatches.Patch(color='#f1c40f', label='Bellman-Ford Shortest Path Tree'),
-        mpatches.Patch(color='red', label='Hamiltonian Circuit'),
+        Line2D([0], [0], color='#f1c40f', lw=4, label='Bellman-Ford Shortest Path Tree'),
+        Line2D([0], [0], color='red', lw=2.5, linestyle='solid', label='Hamiltonian Circuit (Direct Route)'),
+        Line2D([0], [0], color='red', lw=2.5, linestyle='dashed', label='Hamiltonian Circuit (Indirect Path)'),
     ]
     ax2.legend(handles=legend_handles2, loc='lower left', fontsize=9)
     ax2.axis('off')
@@ -600,7 +699,11 @@ def visualise_graph(results):
     fig2.savefig("figure2_results.png", dpi=150, bbox_inches='tight')
     print("  ✓ Saved figure2_results.png")
 
-    plt.show()
+    plt.close('all')
+    try:
+        plt.show()
+    except Exception:
+        pass
 
 
 # ======================================================================

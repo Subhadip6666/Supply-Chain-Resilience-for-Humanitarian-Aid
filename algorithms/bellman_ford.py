@@ -12,6 +12,8 @@ def bellman_ford(adj, edges, source=0):
     pred = [-1] * V
     dist[source] = 0
 
+    dist_history = []
+
     for iteration in range(V - 1):
         for u, v, w in edges:
             if pred[u] == v:
@@ -23,6 +25,7 @@ def bellman_ford(adj, edges, source=0):
 
                 if (u, v) in SUBSIDISED_EDGES:
                     pass
+        dist_history.append(list(dist))
 
     has_negative_cycle = False
     for u, v, w in edges:
@@ -32,7 +35,7 @@ def bellman_ford(adj, edges, source=0):
             has_negative_cycle = True
             break
 
-    return dist, pred, has_negative_cycle
+    return dist, pred, has_negative_cycle, dist_history
 
 def reconstruct_path(pred, target):
     path = []
@@ -62,3 +65,24 @@ def print_bellman_ford_results(dist, pred):
         animate_typing_human(f"  Node {node:>2} ({name:<16}) | Cost: {dist[node]:>4} | Path: {path_str}{subsidy_tag}\n", delay_base=0.01)
 
     print_color("=" * 60, Colors.LIGHT_BLUE)
+
+def print_bf_iterations(edges, dist_history):
+    """
+    Prints a table showing the distance array after each of the first 3
+    relaxation rounds of Bellman-Ford (first 3 iterations only).
+    """
+    cols = ["Iteration"] + [SHORT_NAMES[i] for i in range(12)]
+    widths = [len(c) for c in cols]
+    
+    header_str = " | ".join(f"{cols[i]:^{widths[i]}}" for i in range(len(cols)))
+    print_color("\n" + header_str, Colors.LIGHT_BLUE)
+    
+    for it in range(3):
+        if it < len(dist_history):
+            row_vals = [f"{it + 1}"]
+            for node in range(12):
+                d = dist_history[it][node]
+                val_str = "INF" if d == INF else f"{int(d) if d == int(d) else d}"
+                row_vals.append(val_str)
+            row_str = " | ".join(f"{row_vals[i]:^{widths[i]}}" for i in range(len(cols)))
+            print(row_str)

@@ -23,6 +23,7 @@ class Colors:
 
 def print_slow(text, delay=0.01, color=Colors.ENDC, end='\n'):
     """Prints text slowly with a specified color."""
+    delay = delay / 10.0
     sys.stdout.write(color)
     for char in text:
         sys.stdout.write(char)
@@ -34,11 +35,12 @@ def print_slow(text, delay=0.01, color=Colors.ENDC, end='\n'):
 
 def animate_typing_human(text, delay_base=0.015, color=Colors.ENDC, end='\n'):
     """Types out text with random delays to simulate human typing."""
+    delay_base = delay_base / 10.0
     sys.stdout.write(color)
     for char in text:
         sys.stdout.write(char)
         sys.stdout.flush()
-        time.sleep(max(0.002, delay_base + random.uniform(-0.005, 0.02)))
+        time.sleep(max(0.0002, delay_base + random.uniform(-0.0005, 0.002)))
     sys.stdout.write(Colors.ENDC)
     sys.stdout.write(end)
     sys.stdout.flush()
@@ -50,6 +52,7 @@ def print_color(text, color=Colors.ENDC, end='\n'):
 
 def animate_spinner(message, duration=0.8):
     """Shows a spinner animation for a short duration."""
+    duration = duration / 10.0
     spinner_chars = ['|', '/', '-', '\\']
     end_time = time.time() + duration
     sys.stdout.write(Colors.OKCYAN + message + " ")
@@ -57,7 +60,7 @@ def animate_spinner(message, duration=0.8):
     while time.time() < end_time:
         sys.stdout.write(spinner_chars[i % len(spinner_chars)])
         sys.stdout.flush()
-        time.sleep(0.05)
+        time.sleep(0.01)
         sys.stdout.write('\b')
         i += 1
     sys.stdout.write(Colors.OKGREEN + "Done!" + Colors.ENDC + "\n")
@@ -65,6 +68,7 @@ def animate_spinner(message, duration=0.8):
 
 def animate_progress_bar(message, duration=0.8, length=30, color=Colors.OKCYAN):
     """Shows a filling progress bar."""
+    duration = duration / 10.0
     sys.stdout.write(color + message + " [" + Colors.ENDC)
     steps = length
     sleep_time = duration / steps

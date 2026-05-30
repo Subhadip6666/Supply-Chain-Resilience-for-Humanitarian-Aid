@@ -1,6 +1,6 @@
 from config import INF, NUM_NODES
 from graph import build_graph
-from algorithms import bellman_ford, print_bellman_ford_results, hamiltonian_cycle, print_hamiltonian_results
+from algorithms import bellman_ford, print_bellman_ford_results, print_bf_iterations, hamiltonian_cycle, print_hamiltonian_results
 from .ui import print_color, Colors, print_slow, animate_typing_human
 
 def build_complete_cost_matrix(adj, edges):
@@ -8,7 +8,7 @@ def build_complete_cost_matrix(adj, edges):
     all_preds = []
 
     for src in range(NUM_NODES):
-        dist, pred, neg = bellman_ford(adj, edges, source=src)
+        dist, pred, neg, _ = bellman_ford(adj, edges, source=src)
         cost_matrix[src] = dist
         all_preds.append(pred)
 
@@ -21,7 +21,7 @@ def integrate_algorithms(use_subsidies=True):
     print_color("#" * 60, Colors.LIGHT_BLUE)
 
     adj, edges = build_graph(use_subsidies=use_subsidies)
-    dist, pred, has_neg_cycle = bellman_ford(adj, edges, source=0)
+    dist, pred, has_neg_cycle, dist_history = bellman_ford(adj, edges, source=0)
 
     if has_neg_cycle:
         print_color("\n  ⚠⚠⚠  WARNING: Negative cycle detected in the graph!", Colors.LIGHT_RED + Colors.BOLD)
@@ -29,6 +29,7 @@ def integrate_algorithms(use_subsidies=True):
         return None
 
     print_bellman_ford_results(dist, pred)
+    print_bf_iterations(edges, dist_history)
     cost_matrix, all_preds = build_complete_cost_matrix(adj, edges)
     ham_path, ham_cost = hamiltonian_cycle(cost_matrix)
     print_hamiltonian_results(ham_path, ham_cost)

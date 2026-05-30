@@ -1,6 +1,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 from config import NUM_NODES, SHORT_NAMES
 
 def visualise_graph(results):
@@ -89,20 +90,41 @@ def visualise_graph(results):
 
     if ham_path is not None:
         DG = nx.DiGraph()
-        ham_edges = []
+        direct_ham_edges = []
+        indirect_ham_edges = []
         for i in range(len(ham_path) - 1):
-            ham_edges.append((ham_path[i], ham_path[i + 1]))
-            DG.add_edge(ham_path[i], ham_path[i + 1])
+            u, v = ham_path[i], ham_path[i + 1]
+            DG.add_edge(u, v)
+            if G.has_edge(u, v):
+                direct_ham_edges.append((u, v))
+            else:
+                indirect_ham_edges.append((u, v))
 
-        nx.draw_networkx_edges(DG, pos, edgelist=ham_edges, ax=ax2, edge_color='red', width=2.5, arrows=True, arrowsize=20, arrowstyle='-|>', connectionstyle='arc3,rad=0.1')
+        if direct_ham_edges:
+            nx.draw_networkx_edges(DG, pos, edgelist=direct_ham_edges, ax=ax2,
+                                   edge_color='red', width=2.5, arrows=True,
+                                   arrowsize=20, arrowstyle='-|>', style='solid',
+                                   connectionstyle='arc3,rad=0.1')
+        if indirect_ham_edges:
+            nx.draw_networkx_edges(DG, pos, edgelist=indirect_ham_edges, ax=ax2,
+                                   edge_color='red', width=2.5, arrows=True,
+                                   arrowsize=20, arrowstyle='-|>', style='dashed',
+                                   connectionstyle='arc3,rad=0.1')
 
+        # Text box with total cost
         textstr = f"Hamiltonian Circuit Cost: {ham_cost} units"
         props = dict(boxstyle='round,pad=0.5', facecolor='lightyellow', edgecolor='red', alpha=0.9)
         ax2.text(0.02, 0.98, textstr, transform=ax2.transAxes, fontsize=11, verticalalignment='top', bbox=props)
+    else:
+        # Add a visible warning text box on Figure 2 saying "No Hamiltonian Circuit Found" in red if ham_path is None
+        textstr = "No Hamiltonian Circuit Found"
+        props = dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor='red', alpha=0.9)
+        ax2.text(0.02, 0.98, textstr, transform=ax2.transAxes, fontsize=11, color='red', verticalalignment='top', bbox=props)
 
     legend_handles2 = [
-        mpatches.Patch(color='#f1c40f', label='Bellman-Ford Shortest Path Tree'),
-        mpatches.Patch(color='red', label='Hamiltonian Circuit'),
+        Line2D([0], [0], color='#f1c40f', lw=4, label='Bellman-Ford Shortest Path Tree'),
+        Line2D([0], [0], color='red', lw=2.5, linestyle='solid', label='Hamiltonian Circuit (Direct Route)'),
+        Line2D([0], [0], color='red', lw=2.5, linestyle='dashed', label='Hamiltonian Circuit (Indirect Path)'),
     ]
     ax2.legend(handles=legend_handles2, loc='lower left', fontsize=9)
     ax2.axis('off')
@@ -110,4 +132,8 @@ def visualise_graph(results):
     fig2.savefig("Graph_Image/figure2_results.png", dpi=150, bbox_inches='tight')
     print("  ✓ Saved Graph_Image/figure2_results.png")
 
-    plt.show()
+    # plt.close('all')
+    try:
+        plt.show()
+    except Exception:
+        pass
